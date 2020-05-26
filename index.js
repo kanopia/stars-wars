@@ -45,14 +45,34 @@ const setStarship = (data) => {
   }
 }
 
+const buildPlanet = (planets) => {
+  var buildPlanets = []
+  planets.forEach(planet => {
+    const stringUrl = planet.split('http').join('https')
+    swapi.get(stringUrl)
+      .then(response => {
+        buildPlanets.push(setPlanet(response))
+      })
+      .catch(error => {
+        console.log(error)
+      })
+  });
+  if (buildPlanets.length > 0) {
+    return buildPlanets
+  }
+}
+
 swapi.get('https://swapi.dev/api/films')
   .then((response) => {
-    var movies = []
-    Object.values(response.results).map(movie => {
-      let buildMovie = {
-        name: setMovie(movie)
-      }
-      console.log(buildMovie)
-      // movies.push(buildMovie)
-    })
+    if (response.results.length > 0) {
+      var movies = []
+      Object.values(response.results).map(movie => {
+        let buildMovie = {
+          name: movie.title,
+          planets: buildPlanet(movie.planets)
+        }
+        console.log(buildMovie)
+        // movies.push(buildMovie)
+      })
+    }
   });
