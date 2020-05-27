@@ -1,15 +1,7 @@
 const swapi = require('swapi-node');
 
 const cachePlanets = []
-
-const setMovie = (data) => {
-  return {
-    name: data.title,
-    planets: data.planets,
-    people: data.characters,
-    starships: data.starships
-  }
-}
+const cachePeoples = []
 
 const setPlanet = (data) => {
   return {
@@ -21,7 +13,7 @@ const setPlanet = (data) => {
   }
 }
 
-const setPoeple = (data) => {
+const setPeople = (data) => {
   return {
     name: data.name,
     gender: data.gender,
@@ -43,7 +35,8 @@ const setStarship = (data) => {
     name: data.name,
     model: data.model,
     manufacturer: data.manufacturer,
-    passengers: data.passengers
+    passengers: data.passengers,
+    length: data.length
   }
 }
 
@@ -61,18 +54,63 @@ const buildPlanet = async (planets) => {
   return fillPlanets
 }
 
-swapi.get('https://swapi.dev/api/films')
-  .then((response) => {
-    if (response.results.length > 0) {
-      const movies = []
-      Object.values(response.results).map(async movie => {
-        let buildMovie = {
-          name: movie.title,
-          planets: await buildPlanet(movie.planets)
+const buildPeople = async (peoples) => {
+  let fillPeople = []
+  await Promise.all(
+    peoples.map(async people => {
+      const stringUrl = people.split('http').join('https')
+      if (typeof cachePeoples[stringUrl] === 'undefined') {
+        cachePeoples[stringUrl] = await swapi.get(stringUrl)
+      }
+      fillPeople.push(setPeople(cachePeoples[stringUrl]))
+    })
+  )
+  return fillPeople
+}
+
+const processMovies = () => {
+  swapi.get('https://swapi.dev/api/films')
+    .then(response => {
+      if (response.results.length > 0) {
+        const movies = []
+        Object.values(response.results).map(async movie => {
+          let buildMovie = {
+            name: movie.title,
+            planets: await buildPlanet(movie.planets),
+            people: await buildPeople(movie.characters)
+          }
+          console.log('---------------------------')
+          console.log(buildMovie)
+        })
+      }
+    })
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+const biggerShip = () => {
+  let superShip = null
+  swapi.get('https://swapi.dev/api/vehicles')
+    .then(response => {
+      response.results.sort(function(shipA, shipB) {
+        if (!superShip) {
+          superShip = shipA
         }
-        console.log('---------------------------')
-        console.log(buildMovie)
-        // movies.push(buildMovie)
+        if (parseInt(superShip.length) > parseInt(shipB.length)) {
+          superShip = superShip;
+        } else {
+          superShip = shipB;
+        }
       })
-    }
-  });
+      console.log('--------------------------------------')
+      console.log('Nave mas grande!')
+      console.log(setStarship(superShip))
+    })
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+processMovies()
+biggerShip()
