@@ -1,5 +1,7 @@
 const swapi = require('swapi-node');
 
+const cachePlanets = []
+
 const setMovie = (data) => {
   return {
     name: data.title,
@@ -45,32 +47,30 @@ const setStarship = (data) => {
   }
 }
 
-const buildPlanet = (planets) => {
-  var buildPlanets = []
-  planets.forEach(planet => {
-    const stringUrl = planet.split('http').join('https')
-    swapi.get(stringUrl)
-      .then(response => {
-        buildPlanets.push(setPlanet(response))
-      })
-      .catch(error => {
-        console.log(error)
-      })
-  });
-  if (buildPlanets.length > 0) {
-    return buildPlanets
-  }
+const buildPlanet = async (planets) => {
+  let fillPlanets = []
+  await Promise.all(
+    planets.map(async planet => {
+      const stringUrl = planet.split('http').join('https')
+      if (typeof cachePlanets[stringUrl] === 'undefined') {
+        cachePlanets[stringUrl] = await swapi.get(stringUrl)
+      }
+      fillPlanets.push(setPlanet(cachePlanets[stringUrl]))
+    })
+  )
+  return fillPlanets
 }
 
 swapi.get('https://swapi.dev/api/films')
   .then((response) => {
     if (response.results.length > 0) {
-      var movies = []
-      Object.values(response.results).map(movie => {
+      const movies = []
+      Object.values(response.results).map(async movie => {
         let buildMovie = {
           name: movie.title,
-          planets: buildPlanet(movie.planets)
+          planets: await buildPlanet(movie.planets)
         }
+        console.log('---------------------------')
         console.log(buildMovie)
         // movies.push(buildMovie)
       })
